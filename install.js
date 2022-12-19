@@ -6,7 +6,7 @@ const intall = async () => {
   await promises.mkdir(`${__dirname}/rsshub`, { recursive: true });
 
   const process = exec(
-    `cd ${__dirname}/rsshub && npm init -y && npm add rsshub`
+    `cd ${__dirname}/rsshub && yarn init -y && yarn add rsshub`
   );
 
   process.stdout.on("data", function (data) {
