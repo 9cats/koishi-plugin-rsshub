@@ -10,15 +10,15 @@ const intall = async () => {
   );
 
   process.stdout.on("data", function (data) {
-    console.log("rsshub: " + data);
+    console.log(data);
   });
 
   process.stderr.on("data", function (data) {
-    console.log("rsshub-error: " + data);
+    console.log(data);
   });
 
   process.on("close", function (code) {
-    console.log("exit-code: " + code);
+    console.log("postinstall-exit-code: " + code);
   });
 }
 

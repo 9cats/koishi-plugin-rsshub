@@ -1,5 +1,6 @@
 lib
 dist
+rsshub
 node_modules
 
 yarn-error.log
