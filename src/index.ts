@@ -21,7 +21,7 @@ class RSSHub extends Service {
       CACHE_TYPE: null,
       CACHE_EXPIRE: 0,
       LOGGER_LEVEL: "emerg",
-      ...this.config,
+      PROXY_URI: this.config.PROXY_URI || this.ctx.root.config.request.proxyAgent
     });
     logger.debug("RSSHub launched");
   }
