@@ -1,0 +1,51 @@
+{
+  "name": "koishi-plugin-rsshub",
+  "description": "RSSHub 启动器",
+  "version": "0.0.1",
+  "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
+  "files": [
+    "lib",
+    "install.js"
+  ],
+  "author": "9cats <123337671@qq.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/9cats/koishi-plugin-rsshub.git",
+    "directory": "packages/puppeteer"
+  },
+  "bugs": {
+    "url": "https://github.com/9cats/koishi-plugin-rsshub/issues"
+  },
+  "homepage": "https://github.com/9cats/koishi-plugin-rsshub",
+  "koishi": {
+    "description": {
+      "en": "RSSHub launcher",
+      "zh": "RSSHub 启动器"
+    },
+    "service": {
+      "implements": [
+        "rsshub"
+      ]
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "postinstall": "node install"
+  },
+  "keywords": [
+    "chatbot",
+    "koishi",
+    "plugin",
+    "rsshub",
+    "service"
+  ],
+  "peerDependencies": {
+    "koishi": "^4.10.6"
+  },
+  "devDependencies": {
+    "koishi": "^4.10.6",
+    "typescript": "^4.9.4"
+  }
+}
