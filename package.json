@@ -5,8 +5,7 @@
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
-    "lib",
-    "install.js"
+    "lib"
   ],
   "author": "9cats <123337671@qq.com>",
   "license": "MIT",
