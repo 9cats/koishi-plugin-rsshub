@@ -1,6 +1,14 @@
 // @ts-ignore
-import _RSSHub from "../rsshub/node_modules/rsshub";
 import { Service, Context, Logger, Schema } from "koishi";
+import { existsSync, promises as fs, createWriteStream } from "fs";
+import { exec } from "child_process";
+import { extract } from "tar";
+import get from "get-registry";
+
+const RSSHubPath = `${__dirname}/../rsshub`;
+const SHA = "1381377e917f5248e5fa8a1426fe5449783094d3";
+const version = `1.0.0-master.${SHA.slice(0, 7)}`;
+let _RSSHub;
 
 declare module "koishi" {
   interface Context {
@@ -15,15 +23,128 @@ class RSSHub extends Service {
     super(ctx, "rsshub", false);
   }
 
-  protected start() {
+  async downloadPackage() {
+    const registry = (await get()).replace(/\/$/, "");
+    const url = `${registry}/rsshub/-/rsshub-${version}.tgz`;
+
+    const writer = createWriteStream(`${RSSHubPath}/rsshub-${version}.tgz`);
+    const response = await this.ctx.http.axios(url, {
+      method: "GET",
+      responseType: "stream",
+    });
+
+    response.data.pipe(writer);
+
+    await new Promise((resolve, reject) => {
+      writer.on("finish", resolve);
+      writer.on("error", reject);
+    });
+  }
+
+  async extractPackage() {
+    await new Promise<void>((resolve, reject) => {
+      extract({
+        file: `${RSSHubPath}/rsshub-${version}.tgz`,
+        cwd: RSSHubPath,
+      })
+        .then(resolve)
+        .catch(reject);
+    });
+  }
+
+  async downloadPackageJson() {
+    const registry = "https://rsshub.yarn.lock.registry.9cats.link";
+    const url = `${registry}/${SHA}.package.json`;
+
+    const writer = createWriteStream(`${RSSHubPath}/package/package.json`);
+    const response = await this.ctx.http.axios(url, {
+      method: "GET",
+      responseType: "stream",
+    });
+
+    response.data.pipe(writer);
+
+    await new Promise((resolve, reject) => {
+      writer.on("finish", resolve);
+      writer.on("error", reject);
+    });
+  }
+
+  async downloadYarnLock() {
+    const registry = "https://rsshub.yarn.lock.registry.9cats.link";
+    const url = `${registry}/${SHA}.yarn.lock`;
+
+    const writer = createWriteStream(`${RSSHubPath}/package/yarn.lock`);
+    const response = await this.ctx.http.axios(url, {
+      method: "GET",
+      responseType: "stream",
+    });
+
+    response.data.pipe(writer);
+
+    await new Promise((resolve, reject) => {
+      writer.on("finish", resolve);
+      writer.on("error", reject);
+    });
+  }
+
+  async install() {
+    await fs.mkdir(RSSHubPath);
+
+    logger.info("Downloading Package...");
+    await this.downloadPackage();
+    logger.info("Downloaded Package...");
+    logger.info("Extracting Package...");
+    await this.extractPackage();
+    logger.info("Extracted Package...");
+    logger.info("Downloading yarn-lock.yml...");
+    await this.downloadYarnLock();
+    logger.info("Downloaded yarn-lock.yml...");
+    logger.info("Downloading package.json...");
+    await this.downloadPackageJson();
+    logger.info("Downloaded package.json...");
+  }
+
+  async installDependencies() {
+    return new Promise<void>((resolve, reject) => {
+      const process = exec("yarn --production=true --frozen-lockfile", {
+        cwd: `${RSSHubPath}/package`,
+      });
+
+      process.stdout.on("error", reject);
+      process.stdout.on("close", resolve);
+
+      process.stdout.on("data", (data) => {
+        data = data.toString().trim();
+
+        for (const line of data.split("\n")) {
+          logger.info(line);
+        }
+      });
+    });
+  }
+
+  protected async start() {
+    if (!existsSync(RSSHubPath)) {
+      logger.info("RSSHub not found, cloning...");
+      await this.install();
+      logger.info("RSSHub cloned successfully.");
+      logger.info("RSSHub installing dependencies...");
+      await this.installDependencies();
+      logger.info("RSSHub installed dependencies successfully.");
+    }
+
+    _RSSHub = await require(`${RSSHubPath}/package/lib/pkg.js`);
+
     _RSSHub.init({
       //TODO: 默认配置
       CACHE_TYPE: null,
       CACHE_EXPIRE: 0,
       LOGGER_LEVEL: "emerg",
-      PROXY_URI: this.config.PROXY_URI || this.ctx.root.config.request.proxyAgent
+      PROXY_URI:
+        this.config.PROXY_URI || this.ctx.root.config.request.proxyAgent,
     });
-    logger.debug("RSSHub launched");
+    logger.info("RSSHub Launched");
   }
 
   async request(path: string): Promise<RSSHub.RequestResult> {
