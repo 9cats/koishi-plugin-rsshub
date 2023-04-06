@@ -5,9 +5,10 @@ import { exec } from "child_process";
 import { extract } from "tar";
 import get from "get-registry";
 
-const RSSHubPath = `${__dirname}/../rsshub`;
+const RSSHubPath = `${__dirname}/../node_modules/rsshub`;
 const SHA = "1381377e917f5248e5fa8a1426fe5449783094d3";
 const version = `1.0.0-master.${SHA.slice(0, 7)}`;
+const githubRawRegistry = "https://raw.githubusercontent.com";
 let _RSSHub;
 
 declare module "koishi" {
@@ -27,7 +28,7 @@ class RSSHub extends Service {
     const registry = (await get()).replace(/\/$/, "");
     const url = `${registry}/rsshub/-/rsshub-${version}.tgz`;
 
-    const writer = createWriteStream(`${RSSHubPath}/rsshub-${version}.tgz`);
+    const writer = createWriteStream(`${RSSHubPath}/../rsshub-${version}.tgz`);
     const response = await this.ctx.http.axios(url, {
       method: "GET",
       responseType: "stream",
@@ -44,19 +45,22 @@ class RSSHub extends Service {
   async extractPackage() {
     await new Promise<void>((resolve, reject) => {
       extract({
-        file: `${RSSHubPath}/rsshub-${version}.tgz`,
-        cwd: RSSHubPath,
+        file: `${RSSHubPath}/../rsshub-${version}.tgz`,
+        cwd: `${RSSHubPath}/..`,
       })
         .then(resolve)
         .catch(reject);
     });
+
+    await fs.rename(`${RSSHubPath}/../package`, RSSHubPath)
+    await fs.readFile(`${RSSHubPath}/../rsshub-${version}.tgz`)
   }
 
   async downloadPackageJson() {
-    const registry = "https://rsshub.yarn.lock.registry.9cats.link";
-    const url = `${registry}/${SHA}.package.json`;
+    const registry = githubRawRegistry;
+    const url = `${registry}/DIYgod/RSSHub/${SHA}/package.json`;
 
-    const writer = createWriteStream(`${RSSHubPath}/package/package.json`);
+    const writer = createWriteStream(`${RSSHubPath}/package.json`);
     const response = await this.ctx.http.axios(url, {
       method: "GET",
       responseType: "stream",
@@ -71,10 +75,10 @@ class RSSHub extends Service {
   }
 
   async downloadYarnLock() {
-    const registry = "https://rsshub.yarn.lock.registry.9cats.link";
-    const url = `${registry}/${SHA}.yarn.lock`;
+    const registry = githubRawRegistry;
+    const url = `${registry}/DIYgod/RSSHub/${SHA}/yarn.lock`;
 
-    const writer = createWriteStream(`${RSSHubPath}/package/yarn.lock`);
+    const writer = createWriteStream(`${RSSHubPath}/yarn.lock`);
     const response = await this.ctx.http.axios(url, {
       method: "GET",
       responseType: "stream",
@@ -89,8 +93,6 @@ class RSSHub extends Service {
   }
 
   async install() {
-    await fs.mkdir(RSSHubPath);
-
     logger.info("Downloading Package...");
     await this.downloadPackage();
     logger.info("Downloaded Package...");
@@ -108,7 +110,7 @@ class RSSHub extends Service {
   async installDependencies() {
     return new Promise<void>((resolve, reject) => {
       const process = exec("yarn --production=true --frozen-lockfile", {
-        cwd: `${RSSHubPath}/package`,
+        cwd: `${RSSHubPath}`,
       });
 
       process.stdout.on("error", reject);
@@ -134,10 +136,9 @@ class RSSHub extends Service {
       logger.info("RSSHub installed dependencies successfully.");
     }
 
-    _RSSHub = await require(`${RSSHubPath}/package/lib/pkg.js`);
+    _RSSHub = await require(`${RSSHubPath}/lib/pkg.js`);
 
     _RSSHub.init({
-      //TODO: 默认配置
       CACHE_TYPE: null,
       CACHE_EXPIRE: 0,
       LOGGER_LEVEL: "emerg",
